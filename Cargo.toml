@@ -1,0 +1,20 @@
+[package]
+name = "async_ctx"
+version = "0.1.0"
+authors = ["nytopop <ericizoita@gmail.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Asynchronous contexts."
+homepage = "https://github.com/nytopop/async_ctx"
+repository = "https://github.com/nytopop/async_ctx"
+documentation = "https://docs.rs/async_ctx"
+keywords = ["async", "context", "testing", "scope", "timeout", "condition"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures = "0.3"
+
+[dev-dependencies.tokio]
+version = "0.2"
+features = ["time", "macros", "rt-threaded"]
