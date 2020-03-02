@@ -7,16 +7,37 @@
 //! Asynchronous contexts.
 #![warn(rust_2018_idioms, missing_docs)]
 
-use futures::task::AtomicWaker;
 use std::{
     future::Future,
+    mem,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering::Relaxed},
-        Arc,
+        Arc, Mutex,
     },
-    task::{self, Poll},
+    task::{self, Poll, Waker},
 };
+
+struct Wakers(Mutex<Vec<Waker>>);
+
+impl Default for Wakers {
+    fn default() -> Self {
+        Self(Mutex::new(vec![]))
+    }
+}
+
+impl Wakers {
+    fn register(&self, waker: &Waker) {
+        let mut wakers = self.0.lock().unwrap();
+        wakers.push(waker.clone());
+    }
+
+    fn notify_all(&self) {
+        mem::take(&mut *self.0.lock().unwrap())
+            .into_iter()
+            .for_each(|w| w.wake());
+    }
+}
 
 /// A future that can be completed externally as an asynchronous cancellation mechanism.
 ///
@@ -31,7 +52,7 @@ use std::{
 pub struct Context {
     parent: Option<Box<Context>>,
     cond: Arc<AtomicBool>,
-    wake: Arc<AtomicWaker>,
+    wake: Arc<Wakers>,
 }
 
 impl Future for Context {
@@ -62,7 +83,7 @@ impl Context {
     /// Complete this context (and any derived children).
     pub fn complete(&self) {
         self.cond.store(true, Relaxed);
-        self.wake.wake();
+        self.wake.notify_all();
     }
 
     /// Derive a child context. Completion of the parent (self) will propagate to the child,
